@@ -118,6 +118,27 @@ function EditArticle() {
     }
   };
 
+  const runTeam = async () => {
+    if (!aiTopic) return toast.error("Add a topic first");
+    setTeamRunning(true);
+    setTeamSteps([]);
+    try {
+      const res = await callTeam({ data: { topic: aiTopic, audience: teamAudience || undefined } });
+      setTeamSteps(res.steps);
+      if (res.error) return toast.error(res.error);
+      if (res.final_html) setContent(res.final_html);
+      if (res.suggested_title && !title) setTitle(res.suggested_title);
+      if (res.suggested_title) setSeoTitle(res.suggested_title);
+      if (res.meta_description) {
+        setSeoDesc(res.meta_description);
+        if (!excerpt) setExcerpt(res.meta_description);
+      }
+      toast.success("Agent team finished");
+    } finally {
+      setTeamRunning(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen bg-background"><SiteHeader /></div>;
 
   return (
