@@ -51,8 +51,14 @@ function EditArticle() {
   const [teamRunning, setTeamRunning] = useState(false);
   const [mediaKind, setMediaKind] = useState<"voice" | "podcast" | "video">("voice");
   const [mediaHint, setMediaHint] = useState("");
-  const [mediaBusy, setMediaBusy] = useState<null | "uploading" | "transcribing">(null);
-  const [mediaTranscript, setMediaTranscript] = useState<string | null>(null);
+  type MediaStage = "idle" | "uploading" | "uploaded" | "transcribing" | "ready" | "generating" | "error";
+  const [mediaStage, setMediaStage] = useState<MediaStage>("idle");
+  const [mediaProgress, setMediaProgress] = useState(0);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [mediaErrorAt, setMediaErrorAt] = useState<"upload" | "transcribe" | "article" | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPath, setMediaPath] = useState<string | null>(null);
+  const [mediaTranscript, setMediaTranscript] = useState<string>("");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
