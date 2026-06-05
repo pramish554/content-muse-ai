@@ -250,6 +250,68 @@ function EditArticle() {
 
           <div className="rounded-lg border border-border bg-card p-4">
             <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Mic className="size-4 text-primary" /> Voice / Podcast / Video → Article
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Upload audio or video (max 25MB). AI transcribes it and turns it into a structured article.
+            </p>
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-1">
+                {(["voice", "podcast", "video"] as const).map((k) => (
+                  <Button
+                    key={k}
+                    type="button"
+                    size="sm"
+                    variant={mediaKind === k ? "secondary" : "outline"}
+                    className="flex-1 capitalize"
+                    onClick={() => setMediaKind(k)}
+                  >
+                    {k}
+                  </Button>
+                ))}
+              </div>
+              <Label className="text-xs">Context (optional)</Label>
+              <Input
+                value={mediaHint}
+                onChange={(e) => setMediaHint(e.target.value)}
+                placeholder="e.g. Interview with Jane Doe about climate tech"
+              />
+              <label className="block">
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  className="hidden"
+                  onChange={onMediaSelected}
+                  disabled={mediaBusy !== null}
+                />
+                <Button asChild size="sm" className="w-full" disabled={mediaBusy !== null}>
+                  <span>
+                    {mediaBusy === "uploading" ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Uploading…</>
+                    ) : mediaBusy === "transcribing" ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Transcribing…</>
+                    ) : (
+                      <><Upload className="mr-1.5 size-3.5" /> Upload media</>
+                    )}
+                  </span>
+                </Button>
+              </label>
+              {mediaTranscript && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer select-none text-xs font-medium">
+                    View transcript
+                  </summary>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-[10px] leading-relaxed text-muted-foreground">
+                    {mediaTranscript}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
+
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
               <Users className="size-4 text-primary" /> Multi-agent team
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
