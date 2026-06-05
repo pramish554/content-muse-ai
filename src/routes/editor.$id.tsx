@@ -14,7 +14,7 @@ import { aiAssist } from "@/lib/ai.functions";
 import { Sparkles, Wand2, Tags, Search, Eye, Save, Send } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/articles/$id/edit")({
+export const Route = createFileRoute("/editor/$id")({
   head: () => ({ meta: [{ title: "Edit — Ink" }] }),
   component: EditArticle,
 });
