@@ -27,6 +27,13 @@ export function SiteHeader() {
                   <PenLine className="mr-1.5 size-4" /> Dashboard
                 </Button>
               </Link>
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm">
+                    <Shield className="mr-1.5 size-4" /> Admin
+                  </Button>
+                </Link>
+              )}
               <Button variant="ghost" size="sm" onClick={signOut}>
                 <LogOut className="size-4" />
               </Button>
