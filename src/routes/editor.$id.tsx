@@ -145,6 +145,41 @@ function EditArticle() {
     }
   };
 
+  const onMediaSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    if (file.size > 25 * 1024 * 1024) return toast.error("Max 25MB");
+    setMediaBusy("uploading");
+    setMediaTranscript(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      setMediaBusy("transcribing");
+      const res = await callMedia({ data: { path, kind: mediaKind, hint: mediaHint || undefined } });
+      if (res.error) {
+        if (res.transcript) setMediaTranscript(res.transcript);
+        return toast.error(res.error);
+      }
+      if (res.transcript) setMediaTranscript(res.transcript);
+      if (res.html) setContent(res.html);
+      if (res.title && !title) setTitle(res.title);
+      if (res.excerpt && !excerpt) setExcerpt(res.excerpt);
+      toast.success("Article generated from media");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setMediaBusy(null);
+    }
+  };
+
+
+
   if (loading || !user) return <div className="min-h-screen bg-background"><SiteHeader /></div>;
 
   return (
