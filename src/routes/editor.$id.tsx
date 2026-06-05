@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
 import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
-import { mediaToArticle } from "@/lib/media.functions";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload } from "lucide-react";
+import { transcribeMedia, transcriptToArticle } from "@/lib/media.functions";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload, RefreshCw, AlertTriangle, FileText, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
