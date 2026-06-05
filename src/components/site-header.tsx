@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { Moon, Sun, PenLine, LogOut } from "lucide-react";
+import { Moon, Sun, PenLine, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
-  const { user, signOut } = useAuth();
+  const { user, roles, signOut } = useAuth();
+  const isAdmin = roles.includes("admin");
   const { theme, toggle } = useTheme();
 
   return (
@@ -26,6 +27,13 @@ export function SiteHeader() {
                   <PenLine className="mr-1.5 size-4" /> Dashboard
                 </Button>
               </Link>
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm">
+                    <Shield className="mr-1.5 size-4" /> Admin
+                  </Button>
+                </Link>
+              )}
               <Button variant="ghost" size="sm" onClick={signOut}>
                 <LogOut className="size-4" />
               </Button>
