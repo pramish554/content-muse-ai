@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send } from "lucide-react";
+import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
@@ -28,6 +29,7 @@ function EditArticle() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const callAi = useServerFn(aiAssist);
+  const callTeam = useServerFn(runAgentTeam);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -40,6 +42,9 @@ function EditArticle() {
   const [tagsInput, setTagsInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [aiTopic, setAiTopic] = useState("");
+  const [teamAudience, setTeamAudience] = useState("");
+  const [teamSteps, setTeamSteps] = useState<AgentStep[]>([]);
+  const [teamRunning, setTeamRunning] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
@@ -113,6 +118,27 @@ function EditArticle() {
     }
   };
 
+  const runTeam = async () => {
+    if (!aiTopic) return toast.error("Add a topic first");
+    setTeamRunning(true);
+    setTeamSteps([]);
+    try {
+      const res = await callTeam({ data: { topic: aiTopic, audience: teamAudience || undefined } });
+      setTeamSteps(res.steps);
+      if (res.error) return toast.error(res.error);
+      if (res.final_html) setContent(res.final_html);
+      if (res.suggested_title && !title) setTitle(res.suggested_title);
+      if (res.suggested_title) setSeoTitle(res.suggested_title);
+      if (res.meta_description) {
+        setSeoDesc(res.meta_description);
+        if (!excerpt) setExcerpt(res.meta_description);
+      }
+      toast.success("Agent team finished");
+    } finally {
+      setTeamRunning(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen bg-background"><SiteHeader /></div>;
 
   return (
@@ -179,6 +205,63 @@ function EditArticle() {
                 <Tags className="mr-1 size-3.5" /> Suggest tags
               </Button>
             </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Users className="size-4 text-primary" /> Multi-agent team
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Research → SEO → Writer → Fact-checker → Editor. Replaces the article content with the final draft.
+            </p>
+            <div className="mt-3 space-y-2">
+              <Label className="text-xs">Audience (optional)</Label>
+              <Input
+                value={teamAudience}
+                onChange={(e) => setTeamAudience(e.target.value)}
+                placeholder="e.g. product managers, indie devs"
+              />
+              <Button size="sm" className="w-full" onClick={runTeam} disabled={teamRunning || !aiTopic}>
+                {teamRunning ? (
+                  <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Agents working…</>
+                ) : (
+                  <><Users className="mr-1.5 size-3.5" /> Run agent team</>
+                )}
+              </Button>
+              {!aiTopic && <p className="text-[10px] text-muted-foreground">Set a topic in the AI assistant above.</p>}
+            </div>
+
+            {(teamRunning || teamSteps.length > 0) && (
+              <ol className="mt-4 space-y-2 text-xs">
+                {(["research", "seo", "writer", "factchecker", "editor"] as const).map((name, i) => {
+                  const labels = ["Research", "SEO", "Writer", "Fact-checker", "Editor"];
+                  const step = teamSteps.find((s) => s.agent === name);
+                  const done = !!step;
+                  const active = teamRunning && !done && teamSteps.length === i;
+                  return (
+                    <li key={name} className="flex items-start gap-2">
+                      <span className="mt-0.5">
+                        {done ? (
+                          <CheckCircle2 className="size-3.5 text-primary" />
+                        ) : active ? (
+                          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <span className="block size-3.5 rounded-full border border-border" />
+                        )}
+                      </span>
+                      <details className="flex-1" open={done && name !== "writer" && name !== "editor"}>
+                        <summary className="cursor-pointer select-none font-medium">{labels[i]} Agent</summary>
+                        {step && (
+                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-[10px] leading-relaxed text-muted-foreground">
+                            {step.output.slice(0, 1200)}{step.output.length > 1200 ? "…" : ""}
+                          </pre>
+                        )}
+                      </details>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
