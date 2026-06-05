@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send } from "lucide-react";
+import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
