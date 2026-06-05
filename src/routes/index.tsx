@@ -19,17 +19,12 @@ function HomePage() {
   const { data: articles } = useQuery({
     queryKey: ["published-articles"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("articles")
-        .select("id, title, slug, excerpt, cover_image_url, published_at, author_id, profiles:profiles!articles_author_id_fkey(display_name)")
+        .select("id, title, slug, excerpt, cover_image_url, published_at, author_id")
         .eq("status", "published")
         .order("published_at", { ascending: false })
         .limit(20);
-      if (error) {
-        // fallback without join in case relation name differs
-        const r = await supabase.from("articles").select("*").eq("status", "published").order("published_at", { ascending: false }).limit(20);
-        return r.data ?? [];
-      }
       return data ?? [];
     },
   });
