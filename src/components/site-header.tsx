@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { Moon, Sun, PenLine, LogOut } from "lucide-react";
+import { Moon, Sun, PenLine, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
-  const { user, signOut } = useAuth();
+  const { user, roles, signOut } = useAuth();
+  const isAdmin = roles.includes("admin");
   const { theme, toggle } = useTheme();
 
   return (
