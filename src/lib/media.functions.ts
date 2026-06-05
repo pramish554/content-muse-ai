@@ -4,14 +4,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const inputSchema = z.object({
+const transcribeSchema = z.object({
   path: z.string().min(1).max(500),
   kind: z.enum(["voice", "podcast", "video"]),
   hint: z.string().max(500).optional(),
 });
 
+const articleSchema = z.object({
+  transcript: z.string().min(10).max(60000),
+  kind: z.enum(["voice", "podcast", "video"]),
+  hint: z.string().max(500).optional(),
+});
+
 function formatFromMime(mime: string): string {
-  // Gemini accepts common audio/video formats
   const map: Record<string, string> = {
     "audio/mpeg": "mp3",
     "audio/mp3": "mp3",
@@ -48,31 +53,35 @@ async function chat(body: any): Promise<string> {
   return (json.choices?.[0]?.message?.content ?? "").trim();
 }
 
-export const mediaToArticle = createServerFn({ method: "POST" })
+function aiErrorMessage(e: any): string {
+  return e?.message === "RATE_LIMIT"
+    ? "Rate limited. Try again in a moment."
+    : e?.message === "CREDITS"
+      ? "AI credits exhausted. Add credits in workspace settings."
+      : e?.message ?? "Request failed";
+}
+
+export const transcribeMedia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => inputSchema.parse(data))
+  .inputValidator((data: unknown) => transcribeSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Enforce ownership: storage path must start with the user's id folder.
     if (!data.path.startsWith(`${userId}/`)) {
-      return { error: "Forbidden path" as const, transcript: null, html: null, title: null, excerpt: null };
+      return { error: "Forbidden path" as const, transcript: null };
     }
 
     try {
-      // Download file from private storage
       const { data: file, error: dlErr } = await supabase.storage.from("media").download(data.path);
       if (dlErr || !file) {
-        return { error: dlErr?.message ?? "Download failed", transcript: null, html: null, title: null, excerpt: null };
+        return { error: dlErr?.message ?? "Download failed", transcript: null };
       }
 
-      // Cap at ~25MB to keep payloads sane
       const bytes = new Uint8Array(await file.arrayBuffer());
       if (bytes.byteLength > 25 * 1024 * 1024) {
-        return { error: "File too large (max 25MB).", transcript: null, html: null, title: null, excerpt: null };
+        return { error: "File too large (max 25MB).", transcript: null };
       }
 
-      // Base64 encode
       let binary = "";
       const chunk = 0x8000;
       for (let i = 0; i < bytes.length; i += chunk) {
@@ -82,7 +91,6 @@ export const mediaToArticle = createServerFn({ method: "POST" })
       const mime = (file as Blob).type || (data.kind === "video" ? "video/mp4" : "audio/mpeg");
       const format = formatFromMime(mime);
 
-      // Step 1: transcript
       const transcript = await chat({
         model: "google/gemini-2.5-flash",
         messages: [
@@ -101,12 +109,19 @@ export const mediaToArticle = createServerFn({ method: "POST" })
         ],
       });
 
-      if (!transcript) {
-        return { error: "Empty transcript", transcript: null, html: null, title: null, excerpt: null };
-      }
+      if (!transcript) return { error: "Empty transcript", transcript: null };
+      return { error: null as null | string, transcript };
+    } catch (e: any) {
+      return { error: aiErrorMessage(e), transcript: null };
+    }
+  });
 
-      // Step 2: structured article
-      const articleRaw = await chat({
+export const transcriptToArticle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => articleSchema.parse(data))
+  .handler(async ({ data }) => {
+    try {
+      const raw = await chat({
         model: "google/gemini-3-flash-preview",
         messages: [
           {
@@ -116,38 +131,25 @@ export const mediaToArticle = createServerFn({ method: "POST" })
           },
           {
             role: "user",
-            content: `Source type: ${data.kind}\n${data.hint ? `Context: ${data.hint}\n` : ""}\nTranscript:\n${transcript}`,
+            content: `Source type: ${data.kind}\n${data.hint ? `Context: ${data.hint}\n` : ""}\nTranscript:\n${data.transcript}`,
           },
         ],
       });
 
       let parsed: { title?: string; excerpt?: string; html?: string } = {};
       try {
-        parsed = JSON.parse(articleRaw.replace(/```json|```/g, "").trim());
+        parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
       } catch {
-        return {
-          error: "Could not parse article output",
-          transcript,
-          html: articleRaw,
-          title: null,
-          excerpt: null,
-        };
+        return { error: "Could not parse article output", html: raw, title: null, excerpt: null };
       }
 
       return {
         error: null as null | string,
-        transcript,
         html: parsed.html ?? null,
         title: parsed.title ?? null,
         excerpt: parsed.excerpt ?? null,
       };
     } catch (e: any) {
-      const msg =
-        e?.message === "RATE_LIMIT"
-          ? "Rate limited. Try again in a moment."
-          : e?.message === "CREDITS"
-            ? "AI credits exhausted. Add credits in workspace settings."
-            : e?.message ?? "Media conversion failed";
-      return { error: msg, transcript: null, html: null, title: null, excerpt: null };
+      return { error: aiErrorMessage(e), html: null, title: null, excerpt: null };
     }
   });
