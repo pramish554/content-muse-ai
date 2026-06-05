@@ -42,6 +42,9 @@ function EditArticle() {
   const [tagsInput, setTagsInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [aiTopic, setAiTopic] = useState("");
+  const [teamAudience, setTeamAudience] = useState("");
+  const [teamSteps, setTeamSteps] = useState<AgentStep[]>([]);
+  const [teamRunning, setTeamRunning] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
