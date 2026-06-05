@@ -350,7 +350,7 @@ function EditArticle() {
             <p className="mt-1 text-xs text-muted-foreground">
               Upload audio or video (max 25MB). AI transcribes it and turns it into a structured article.
             </p>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-3">
               <div className="flex gap-1">
                 {(["voice", "podcast", "video"] as const).map((k) => (
                   <Button
@@ -360,49 +360,128 @@ function EditArticle() {
                     variant={mediaKind === k ? "secondary" : "outline"}
                     className="flex-1 capitalize"
                     onClick={() => setMediaKind(k)}
+                    disabled={mediaStage === "uploading" || mediaStage === "transcribing" || mediaStage === "generating"}
                   >
                     {k}
                   </Button>
                 ))}
               </div>
-              <Label className="text-xs">Context (optional)</Label>
-              <Input
-                value={mediaHint}
-                onChange={(e) => setMediaHint(e.target.value)}
-                placeholder="e.g. Interview with Jane Doe about climate tech"
-              />
-              <label className="block">
-                <input
-                  type="file"
-                  accept="audio/*,video/*"
-                  className="hidden"
-                  onChange={onMediaSelected}
-                  disabled={mediaBusy !== null}
+              <div>
+                <Label className="text-xs">Context (optional)</Label>
+                <Input
+                  value={mediaHint}
+                  onChange={(e) => setMediaHint(e.target.value)}
+                  placeholder="e.g. Interview with Jane Doe about climate tech"
                 />
-                <Button asChild size="sm" className="w-full" disabled={mediaBusy !== null}>
-                  <span>
-                    {mediaBusy === "uploading" ? (
-                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Uploading…</>
-                    ) : mediaBusy === "transcribing" ? (
-                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Transcribing…</>
-                    ) : (
-                      <><Upload className="mr-1.5 size-3.5" /> Upload media</>
-                    )}
-                  </span>
-                </Button>
-              </label>
-              {mediaTranscript && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer select-none text-xs font-medium">
-                    View transcript
-                  </summary>
-                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-[10px] leading-relaxed text-muted-foreground">
-                    {mediaTranscript}
-                  </pre>
-                </details>
+              </div>
+
+              {(mediaStage === "idle" || mediaStage === "error") && (
+                <label className="block">
+                  <input
+                    type="file"
+                    accept="audio/*,video/*"
+                    className="hidden"
+                    onChange={onMediaSelected}
+                  />
+                  <Button asChild size="sm" className="w-full">
+                    <span><Upload className="mr-1.5 size-3.5" /> {mediaStage === "error" ? "Upload a different file" : "Upload media"}</span>
+                  </Button>
+                </label>
+              )}
+
+              {mediaFile && (mediaStage === "uploading" || mediaStage === "uploaded" || mediaStage === "transcribing") && (
+                <div className="space-y-2 rounded-md border border-border bg-muted/40 p-2.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="truncate font-medium">{mediaFile.name}</span>
+                    <span className="text-muted-foreground">{(mediaFile.size / 1024 / 1024).toFixed(1)} MB</span>
+                  </div>
+                  {mediaStage === "uploading" && (
+                    <>
+                      <Progress value={mediaProgress} className="h-1.5" />
+                      <p className="text-[10px] text-muted-foreground">Uploading… {mediaProgress}%</p>
+                    </>
+                  )}
+                  {mediaStage === "uploaded" && (
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <CheckCircle2 className="size-3 text-primary" /> Uploaded
+                    </p>
+                  )}
+                  {mediaStage === "transcribing" && (
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Loader2 className="size-3 animate-spin" /> Transcribing audio… this can take a minute.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {mediaStage === "error" && mediaError && (
+                <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5">
+                  <p className="flex items-start gap-1.5 text-xs text-destructive">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <span><strong className="capitalize">{mediaErrorAt}</strong> failed: {mediaError}</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={retryMedia}>
+                      <RefreshCw className="mr-1.5 size-3.5" /> Retry
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={resetMedia}>
+                      <X className="mr-1 size-3.5" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(mediaStage === "ready" || mediaStage === "generating") && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <FileText className="size-3.5" /> Transcript (editable)
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      {mediaTranscript.length.toLocaleString()} chars
+                    </span>
+                  </div>
+                  <Textarea
+                    value={mediaTranscript}
+                    onChange={(e) => setMediaTranscript(e.target.value)}
+                    rows={10}
+                    className="font-mono text-xs"
+                    placeholder="Edit the transcript before generating the article…"
+                    disabled={mediaStage === "generating"}
+                  />
+                  {mediaError && mediaErrorAt === "article" && (
+                    <p className="flex items-start gap-1.5 text-xs text-destructive">
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                      <span>Article generation failed: {mediaError}</span>
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={doGenerateArticle}
+                      disabled={mediaStage === "generating" || !mediaTranscript.trim()}
+                    >
+                      {mediaStage === "generating" ? (
+                        <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Generating…</>
+                      ) : (
+                        <><Wand2 className="mr-1.5 size-3.5" /> Generate article</>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={resetMedia}
+                      disabled={mediaStage === "generating"}
+                    >
+                      <X className="mr-1 size-3.5" /> Discard
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
+
 
           <div className="rounded-lg border border-border bg-card p-4">
 
