@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
 import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2 } from "lucide-react";
+import { mediaToArticle } from "@/lib/media.functions";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
@@ -30,6 +31,7 @@ function EditArticle() {
   const { user, loading } = useAuth();
   const callAi = useServerFn(aiAssist);
   const callTeam = useServerFn(runAgentTeam);
+  const callMedia = useServerFn(mediaToArticle);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -45,6 +47,10 @@ function EditArticle() {
   const [teamAudience, setTeamAudience] = useState("");
   const [teamSteps, setTeamSteps] = useState<AgentStep[]>([]);
   const [teamRunning, setTeamRunning] = useState(false);
+  const [mediaKind, setMediaKind] = useState<"voice" | "podcast" | "video">("voice");
+  const [mediaHint, setMediaHint] = useState("");
+  const [mediaBusy, setMediaBusy] = useState<null | "uploading" | "transcribing">(null);
+  const [mediaTranscript, setMediaTranscript] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
@@ -139,6 +145,41 @@ function EditArticle() {
     }
   };
 
+  const onMediaSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    if (file.size > 25 * 1024 * 1024) return toast.error("Max 25MB");
+    setMediaBusy("uploading");
+    setMediaTranscript(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      setMediaBusy("transcribing");
+      const res = await callMedia({ data: { path, kind: mediaKind, hint: mediaHint || undefined } });
+      if (res.error) {
+        if (res.transcript) setMediaTranscript(res.transcript);
+        return toast.error(res.error);
+      }
+      if (res.transcript) setMediaTranscript(res.transcript);
+      if (res.html) setContent(res.html);
+      if (res.title && !title) setTitle(res.title);
+      if (res.excerpt && !excerpt) setExcerpt(res.excerpt);
+      toast.success("Article generated from media");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setMediaBusy(null);
+    }
+  };
+
+
+
   if (loading || !user) return <div className="min-h-screen bg-background"><SiteHeader /></div>;
 
   return (
@@ -208,6 +249,68 @@ function EditArticle() {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Mic className="size-4 text-primary" /> Voice / Podcast / Video → Article
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Upload audio or video (max 25MB). AI transcribes it and turns it into a structured article.
+            </p>
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-1">
+                {(["voice", "podcast", "video"] as const).map((k) => (
+                  <Button
+                    key={k}
+                    type="button"
+                    size="sm"
+                    variant={mediaKind === k ? "secondary" : "outline"}
+                    className="flex-1 capitalize"
+                    onClick={() => setMediaKind(k)}
+                  >
+                    {k}
+                  </Button>
+                ))}
+              </div>
+              <Label className="text-xs">Context (optional)</Label>
+              <Input
+                value={mediaHint}
+                onChange={(e) => setMediaHint(e.target.value)}
+                placeholder="e.g. Interview with Jane Doe about climate tech"
+              />
+              <label className="block">
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  className="hidden"
+                  onChange={onMediaSelected}
+                  disabled={mediaBusy !== null}
+                />
+                <Button asChild size="sm" className="w-full" disabled={mediaBusy !== null}>
+                  <span>
+                    {mediaBusy === "uploading" ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Uploading…</>
+                    ) : mediaBusy === "transcribing" ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Transcribing…</>
+                    ) : (
+                      <><Upload className="mr-1.5 size-3.5" /> Upload media</>
+                    )}
+                  </span>
+                </Button>
+              </label>
+              {mediaTranscript && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer select-none text-xs font-medium">
+                    View transcript
+                  </summary>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-[10px] leading-relaxed text-muted-foreground">
+                    {mediaTranscript}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
+
             <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
               <Users className="size-4 text-primary" /> Multi-agent team
             </h3>
