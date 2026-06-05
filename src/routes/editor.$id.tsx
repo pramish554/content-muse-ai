@@ -47,6 +47,10 @@ function EditArticle() {
   const [teamAudience, setTeamAudience] = useState("");
   const [teamSteps, setTeamSteps] = useState<AgentStep[]>([]);
   const [teamRunning, setTeamRunning] = useState(false);
+  const [mediaKind, setMediaKind] = useState<"voice" | "podcast" | "video">("voice");
+  const [mediaHint, setMediaHint] = useState("");
+  const [mediaBusy, setMediaBusy] = useState<null | "uploading" | "transcribing">(null);
+  const [mediaTranscript, setMediaTranscript] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
