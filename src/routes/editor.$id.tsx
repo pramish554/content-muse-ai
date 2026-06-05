@@ -31,6 +31,7 @@ function EditArticle() {
   const { user, loading } = useAuth();
   const callAi = useServerFn(aiAssist);
   const callTeam = useServerFn(runAgentTeam);
+  const callMedia = useServerFn(mediaToArticle);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
