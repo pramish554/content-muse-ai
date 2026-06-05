@@ -45,7 +45,7 @@ function Dashboard() {
       .select()
       .single();
     if (error) return toast.error(error.message);
-    navigate({ to: "/articles/$id/edit", params: { id: data.id } });
+    navigate({ to: "/editor/$id", params: { id: data.id } });
   };
 
   const remove = async (id: string) => {
@@ -83,7 +83,7 @@ function Dashboard() {
             <div key={a.id} className="flex items-center justify-between gap-4 p-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <Link to="/articles/$id/edit" params={{ id: a.id }} className="font-serif text-lg font-medium hover:text-primary">
+                  <Link to="/editor/$id" params={{ id: a.id }} className="font-serif text-lg font-medium hover:text-primary">
                     {a.title || "Untitled"}
                   </Link>
                   <Badge variant={a.status === "published" ? "default" : "secondary"}>{a.status}</Badge>
@@ -98,7 +98,7 @@ function Dashboard() {
                     <Button variant="ghost" size="sm">View</Button>
                   </Link>
                 )}
-                <Link to="/articles/$id/edit" params={{ id: a.id }}>
+                <Link to="/editor/$id" params={{ id: a.id }}>
                   <Button variant="outline" size="sm">Edit</Button>
                 </Link>
                 <Button variant="ghost" size="sm" onClick={() => remove(a.id)}>Delete</Button>
