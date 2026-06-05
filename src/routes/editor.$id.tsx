@@ -207,6 +207,63 @@ function EditArticle() {
             </div>
           </div>
 
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Users className="size-4 text-primary" /> Multi-agent team
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Research → SEO → Writer → Fact-checker → Editor. Replaces the article content with the final draft.
+            </p>
+            <div className="mt-3 space-y-2">
+              <Label className="text-xs">Audience (optional)</Label>
+              <Input
+                value={teamAudience}
+                onChange={(e) => setTeamAudience(e.target.value)}
+                placeholder="e.g. product managers, indie devs"
+              />
+              <Button size="sm" className="w-full" onClick={runTeam} disabled={teamRunning || !aiTopic}>
+                {teamRunning ? (
+                  <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Agents working…</>
+                ) : (
+                  <><Users className="mr-1.5 size-3.5" /> Run agent team</>
+                )}
+              </Button>
+              {!aiTopic && <p className="text-[10px] text-muted-foreground">Set a topic in the AI assistant above.</p>}
+            </div>
+
+            {(teamRunning || teamSteps.length > 0) && (
+              <ol className="mt-4 space-y-2 text-xs">
+                {(["research", "seo", "writer", "factchecker", "editor"] as const).map((name, i) => {
+                  const labels = ["Research", "SEO", "Writer", "Fact-checker", "Editor"];
+                  const step = teamSteps.find((s) => s.agent === name);
+                  const done = !!step;
+                  const active = teamRunning && !done && teamSteps.length === i;
+                  return (
+                    <li key={name} className="flex items-start gap-2">
+                      <span className="mt-0.5">
+                        {done ? (
+                          <CheckCircle2 className="size-3.5 text-primary" />
+                        ) : active ? (
+                          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <span className="block size-3.5 rounded-full border border-border" />
+                        )}
+                      </span>
+                      <details className="flex-1" open={done && name !== "writer" && name !== "editor"}>
+                        <summary className="cursor-pointer select-none font-medium">{labels[i]} Agent</summary>
+                        {step && (
+                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-[10px] leading-relaxed text-muted-foreground">
+                            {step.output.slice(0, 1200)}{step.output.length > 1200 ? "…" : ""}
+                          </pre>
+                        )}
+                      </details>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <h3 className="font-serif text-lg font-semibold">Settings</h3>
             <div>
