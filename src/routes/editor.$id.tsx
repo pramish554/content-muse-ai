@@ -153,38 +153,125 @@ function EditArticle() {
     }
   };
 
-  const onMediaSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadWithProgress = (file: File, signedUrl: string) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", signedUrl, true);
+      if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) setMediaProgress(Math.round((ev.loaded / ev.total) * 100));
+      };
+      xhr.onload = () =>
+        xhr.status >= 200 && xhr.status < 300
+          ? resolve()
+          : reject(new Error(`Upload failed (${xhr.status})`));
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.onabort = () => reject(new Error("Upload aborted"));
+      xhr.send(file);
+    });
+
+  const doUpload = async (file: File) => {
+    if (!user) return;
+    setMediaStage("uploading");
+    setMediaProgress(0);
+    setMediaError(null);
+    setMediaErrorAt(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("media")
+        .createSignedUploadUrl(path);
+      if (signErr || !signed) throw new Error(signErr?.message ?? "Could not get upload URL");
+      await uploadWithProgress(file, signed.signedUrl);
+      setMediaPath(path);
+      setMediaStage("uploaded");
+      await doTranscribe(path);
+    } catch (err: any) {
+      setMediaError(err?.message ?? "Upload failed");
+      setMediaErrorAt("upload");
+      setMediaStage("error");
+    }
+  };
+
+  const doTranscribe = async (path: string) => {
+    setMediaStage("transcribing");
+    setMediaError(null);
+    setMediaErrorAt(null);
+    try {
+      const res = await callTranscribe({ data: { path, kind: mediaKind, hint: mediaHint || undefined } });
+      if (res.error || !res.transcript) {
+        setMediaError(res.error ?? "Empty transcript");
+        setMediaErrorAt("transcribe");
+        setMediaStage("error");
+        return;
+      }
+      setMediaTranscript(res.transcript);
+      setMediaStage("ready");
+      toast.success("Transcript ready — review before generating");
+    } catch (err: any) {
+      setMediaError(err?.message ?? "Transcription failed");
+      setMediaErrorAt("transcribe");
+      setMediaStage("error");
+    }
+  };
+
+  const doGenerateArticle = async () => {
+    if (!mediaTranscript.trim()) return toast.error("Transcript is empty");
+    setMediaStage("generating");
+    setMediaError(null);
+    setMediaErrorAt(null);
+    try {
+      const res = await callArticle({
+        data: { transcript: mediaTranscript, kind: mediaKind, hint: mediaHint || undefined },
+      });
+      if (res.error) {
+        setMediaError(res.error);
+        setMediaErrorAt("article");
+        setMediaStage("ready");
+        return;
+      }
+      if (res.html) setContent(res.html);
+      if (res.title && !title) setTitle(res.title);
+      if (res.excerpt && !excerpt) setExcerpt(res.excerpt);
+      setMediaStage("ready");
+      toast.success("Article generated from transcript");
+    } catch (err: any) {
+      setMediaError(err?.message ?? "Generation failed");
+      setMediaErrorAt("article");
+      setMediaStage("ready");
+    }
+  };
+
+  const onMediaSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !user) return;
     if (file.size > 25 * 1024 * 1024) return toast.error("Max 25MB");
-    setMediaBusy("uploading");
-    setMediaTranscript(null);
-    try {
-      const ext = file.name.split(".").pop() ?? "bin";
-      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
-        contentType: file.type || undefined,
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-      setMediaBusy("transcribing");
-      const res = await callMedia({ data: { path, kind: mediaKind, hint: mediaHint || undefined } });
-      if (res.error) {
-        if (res.transcript) setMediaTranscript(res.transcript);
-        return toast.error(res.error);
-      }
-      if (res.transcript) setMediaTranscript(res.transcript);
-      if (res.html) setContent(res.html);
-      if (res.title && !title) setTitle(res.title);
-      if (res.excerpt && !excerpt) setExcerpt(res.excerpt);
-      toast.success("Article generated from media");
-    } catch (err: any) {
-      toast.error(err?.message ?? "Upload failed");
-    } finally {
-      setMediaBusy(null);
-    }
+    setMediaFile(file);
+    setMediaTranscript("");
+    setMediaPath(null);
+    void doUpload(file);
   };
+
+  const retryMedia = () => {
+    if (mediaErrorAt === "upload" && mediaFile) return void doUpload(mediaFile);
+    if (mediaErrorAt === "transcribe" && mediaPath) return void doTranscribe(mediaPath);
+    if (mediaErrorAt === "article") return void doGenerateArticle();
+  };
+
+  const resetMedia = () => {
+    setMediaFile(null);
+    setMediaPath(null);
+    setMediaTranscript("");
+    setMediaProgress(0);
+    setMediaError(null);
+    setMediaErrorAt(null);
+    setMediaStage("idle");
+  };
+
+
 
 
 
