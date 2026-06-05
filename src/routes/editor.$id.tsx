@@ -29,6 +29,7 @@ function EditArticle() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const callAi = useServerFn(aiAssist);
+  const callTeam = useServerFn(runAgentTeam);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
