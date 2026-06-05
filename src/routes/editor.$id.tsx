@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
 import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2 } from "lucide-react";
+import { mediaToArticle } from "@/lib/media.functions";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
