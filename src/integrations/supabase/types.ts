@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          model: string | null
+          tokens: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          tokens?: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       article_tags: {
         Row: {
           article_id: string
@@ -44,6 +71,38 @@ export type Database = {
           },
         ]
       }
+      article_views: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          referrer: string | null
+          visitor_hash: string | null
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          visitor_hash?: string | null
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_views_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author_id: string
@@ -53,13 +112,20 @@ export type Database = {
           created_at: string
           excerpt: string | null
           id: string
+          json_ld: Json | null
+          keywords: Json | null
+          language: string
+          parent_article_id: string | null
           published_at: string | null
+          review_state: string
+          scheduled_at: string | null
           seo_description: string | null
           seo_title: string | null
           slug: string
           status: Database["public"]["Enums"]["article_status"]
           title: string
           updated_at: string
+          view_count: number
         }
         Insert: {
           author_id: string
@@ -69,13 +135,20 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           id?: string
+          json_ld?: Json | null
+          keywords?: Json | null
+          language?: string
+          parent_article_id?: string | null
           published_at?: string | null
+          review_state?: string
+          scheduled_at?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug: string
           status?: Database["public"]["Enums"]["article_status"]
           title: string
           updated_at?: string
+          view_count?: number
         }
         Update: {
           author_id?: string
@@ -85,13 +158,20 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           id?: string
+          json_ld?: Json | null
+          keywords?: Json | null
+          language?: string
+          parent_article_id?: string | null
           published_at?: string | null
+          review_state?: string
+          scheduled_at?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["article_status"]
           title?: string
           updated_at?: string
+          view_count?: number
         }
         Relationships: [
           {
@@ -99,6 +179,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "articles_parent_article_id_fkey"
+            columns: ["parent_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
             referencedColumns: ["id"]
           },
         ]
@@ -124,6 +211,71 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          article_id: string
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          article_id: string
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          article_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletters: {
+        Row: {
+          author_id: string
+          created_at: string
+          html: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          html: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          html?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          title?: string
         }
         Relationships: []
       }
@@ -208,6 +360,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_article_view: { Args: { _slug: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "editor" | "author"
