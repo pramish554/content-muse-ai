@@ -94,6 +94,13 @@ function EditArticle() {
       setSeoTitle(data.seo_title ?? "");
       setSeoDesc(data.seo_description ?? "");
       setStatus(data.status);
+      setReviewState(data.review_state ?? "none");
+      setLanguage(data.language ?? "en");
+      setScheduledAt(data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 16) : "");
+      setJsonLdPreview(data.json_ld ?? null);
+      if (Array.isArray(data.keywords)) {
+        setSeoKw({ primary: data.keywords[0], secondary: data.keywords.slice(1) });
+      }
     })();
   }, [id]);
 
