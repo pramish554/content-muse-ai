@@ -13,8 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { aiAssist } from "@/lib/ai.functions";
 import { runAgentTeam, type AgentStep } from "@/lib/agents.functions";
 import { transcribeMedia, transcriptToArticle } from "@/lib/media.functions";
+import { seoKeywords, seoMeta, seoSchema } from "@/lib/seo.functions";
+import { translateArticle, LANGUAGES } from "@/lib/translate.functions";
+import { scheduleArticle, submitForReview } from "@/lib/workflow.functions";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload, RefreshCw, AlertTriangle, FileText, X } from "lucide-react";
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from "@/components/ui/select";
+import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload, RefreshCw, AlertTriangle, FileText, X, Languages, Clock, ShieldCheck, Code2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/editor/$id")({
@@ -34,6 +40,12 @@ function EditArticle() {
   const callTeam = useServerFn(runAgentTeam);
   const callTranscribe = useServerFn(transcribeMedia);
   const callArticle = useServerFn(transcriptToArticle);
+  const callKeywords = useServerFn(seoKeywords);
+  const callMeta = useServerFn(seoMeta);
+  const callSchema = useServerFn(seoSchema);
+  const callTranslate = useServerFn(translateArticle);
+  const callSchedule = useServerFn(scheduleArticle);
+  const callSubmitReview = useServerFn(submitForReview);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -59,6 +71,12 @@ function EditArticle() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPath, setMediaPath] = useState<string | null>(null);
   const [mediaTranscript, setMediaTranscript] = useState<string>("");
+  const [reviewState, setReviewState] = useState<string>("none");
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [language, setLanguage] = useState<string>("en");
+  const [translateTo, setTranslateTo] = useState<string>("es");
+  const [seoKw, setSeoKw] = useState<{ primary?: string; secondary?: string[]; long_tail?: string[] } | null>(null);
+  const [jsonLdPreview, setJsonLdPreview] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
@@ -76,6 +94,13 @@ function EditArticle() {
       setSeoTitle(data.seo_title ?? "");
       setSeoDesc(data.seo_description ?? "");
       setStatus(data.status);
+      setReviewState(data.review_state ?? "none");
+      setLanguage(data.language ?? "en");
+      setScheduledAt(data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 16) : "");
+      setJsonLdPreview(data.json_ld ?? null);
+      if (Array.isArray(data.keywords)) {
+        setSeoKw({ primary: String(data.keywords[0] ?? ""), secondary: data.keywords.slice(1).map(String) });
+      }
     })();
   }, [id]);
 
@@ -270,6 +295,81 @@ function EditArticle() {
     setMediaErrorAt(null);
     setMediaStage("idle");
   };
+
+  const runSeoKeywords = async () => {
+    if (!content) return toast.error("Add content first");
+    setBusy("kw");
+    try {
+      const res = await callKeywords({ data: { title, content } });
+      if (res.error) return toast.error(res.error);
+      setSeoKw({ primary: res.primary, secondary: res.secondary, long_tail: res.long_tail });
+      const kwArr = [res.primary, ...(res.secondary ?? [])].filter((v): v is string => !!v);
+      await supabase.from("articles").update({ keywords: kwArr }).eq("id", id);
+      toast.success("Keywords saved");
+    } finally { setBusy(null); }
+  };
+
+  const runSeoMeta = async () => {
+    if (!title || !content) return toast.error("Title and content required");
+    setBusy("meta");
+    try {
+      const res = await callMeta({ data: { title, content, keyword: seoKw?.primary } });
+      if (res.error) return toast.error(res.error);
+      if (res.seo_title) setSeoTitle(res.seo_title);
+      if (res.meta_description) setSeoDesc(res.meta_description);
+      toast.success("Meta updated");
+    } finally { setBusy(null); }
+  };
+
+  const runSeoSchema = async () => {
+    if (!title) return toast.error("Title required");
+    setBusy("schema");
+    try {
+      const res = await callSchema({
+        data: {
+          title, excerpt, slug, coverImageUrl: coverUrl || null,
+          author: user?.email ?? undefined,
+          publishedAt: status === "published" ? new Date().toISOString() : null,
+        },
+      });
+      if (res.error) return toast.error(res.error);
+      setJsonLdPreview(res.json_ld);
+      await supabase.from("articles").update({ json_ld: res.json_ld }).eq("id", id);
+      toast.success("JSON-LD schema saved");
+    } finally { setBusy(null); }
+  };
+
+  const runTranslate = async () => {
+    setBusy("translate");
+    try {
+      const res = await callTranslate({ data: { articleId: id, targetLang: translateTo } });
+      if (res.error) return toast.error(res.error);
+      toast.success("Translated draft created");
+      if (res.articleId) navigate({ to: "/editor/$id", params: { id: res.articleId } });
+    } finally { setBusy(null); }
+  };
+
+  const saveSchedule = async () => {
+    setBusy("schedule");
+    try {
+      const iso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+      await callSchedule({ data: { articleId: id, scheduledAt: iso } });
+      toast.success(iso ? "Scheduled" : "Schedule cleared");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
+  const sendForReview = async () => {
+    setBusy("review");
+    try {
+      await callSubmitReview({ data: { articleId: id } });
+      setReviewState("submitted");
+      toast.success("Submitted for review");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
+
 
 
 
@@ -539,6 +639,100 @@ function EditArticle() {
                 })}
               </ol>
             )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Search className="size-4 text-primary" /> SEO toolkit
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              <Button size="sm" variant="outline" onClick={runSeoKeywords} disabled={busy !== null}>
+                {busy === "kw" ? <Loader2 className="size-3.5 animate-spin" /> : "Keywords"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={runSeoMeta} disabled={busy !== null}>
+                {busy === "meta" ? <Loader2 className="size-3.5 animate-spin" /> : "Meta"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={runSeoSchema} disabled={busy !== null}>
+                {busy === "schema" ? <Loader2 className="size-3.5 animate-spin" /> : <><Code2 className="mr-1 size-3.5" />Schema</>}
+              </Button>
+            </div>
+            {seoKw?.primary && (
+              <div className="rounded bg-muted p-2 text-xs">
+                <p><span className="font-medium">Primary:</span> {seoKw.primary}</p>
+                {seoKw.secondary?.length ? (
+                  <p className="mt-1 text-muted-foreground">Secondary: {seoKw.secondary.join(", ")}</p>
+                ) : null}
+                {seoKw.long_tail?.length ? (
+                  <p className="mt-1 text-muted-foreground">Long-tail: {seoKw.long_tail.join(", ")}</p>
+                ) : null}
+              </div>
+            )}
+            {jsonLdPreview && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground">JSON-LD preview</summary>
+                <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 text-[10px]">
+                  {JSON.stringify(jsonLdPreview, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Languages className="size-4 text-primary" /> Translate
+            </h3>
+            <p className="text-xs text-muted-foreground">Current language: {LANGUAGES[language] ?? language}</p>
+            <div className="flex gap-2">
+              <Select value={translateTo} onValueChange={setTranslateTo}>
+                <SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LANGUAGES).filter(([k]) => k !== language).map(([k, name]) => (
+                    <SelectItem key={k} value={k}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={runTranslate} disabled={busy !== null || !content}>
+                {busy === "translate" ? <Loader2 className="size-3.5 animate-spin" /> : "Create"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Clock className="size-4 text-primary" /> Schedule & review
+            </h3>
+            <div>
+              <Label className="text-xs">Publish at</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+                <Button size="sm" variant="outline" onClick={saveSchedule} disabled={busy !== null}>
+                  {busy === "schedule" ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Scheduled drafts auto-publish when the cron job runs.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Editorial review</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge variant={reviewState === "approved" ? "default" : "secondary"} className="capitalize">
+                  {reviewState.replace("_", " ")}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={sendForReview}
+                  disabled={busy !== null || reviewState === "submitted"}
+                >
+                  <ShieldCheck className="mr-1 size-3.5" /> Submit
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectTrigger,
@@ -33,7 +34,10 @@ import {
   deleteTag,
 } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3 } from "lucide-react";
+import { listReviewQueue, setReviewState } from "@/lib/workflow.functions";
+import { generateNewsletter, listNewsletters, getNewsletter, deleteNewsletter } from "@/lib/newsletter.functions";
+import { platformAnalytics } from "@/lib/analytics.functions";
+import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3, Mail, ClipboardCheck, Sparkles, Loader2, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Ink" }] }),
@@ -87,6 +91,9 @@ function AdminPage() {
           <TabsList className="flex flex-wrap">
             <TabsTrigger value="overview"><BarChart3 className="mr-1.5 size-4" /> Overview</TabsTrigger>
             <TabsTrigger value="articles"><FileText className="mr-1.5 size-4" /> Articles</TabsTrigger>
+            <TabsTrigger value="review"><ClipboardCheck className="mr-1.5 size-4" /> Review</TabsTrigger>
+            <TabsTrigger value="newsletters"><Mail className="mr-1.5 size-4" /> Newsletters</TabsTrigger>
+            <TabsTrigger value="analytics"><BarChart3 className="mr-1.5 size-4" /> Analytics</TabsTrigger>
             <TabsTrigger value="users"><Users className="mr-1.5 size-4" /> Users</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="mr-1.5 size-4" /> Categories</TabsTrigger>
             <TabsTrigger value="tags"><Tag className="mr-1.5 size-4" /> Tags</TabsTrigger>
@@ -94,6 +101,9 @@ function AdminPage() {
 
           <TabsContent value="overview" className="mt-6"><OverviewPanel /></TabsContent>
           <TabsContent value="articles" className="mt-6"><ArticlesPanel /></TabsContent>
+          <TabsContent value="review" className="mt-6"><ReviewPanel /></TabsContent>
+          <TabsContent value="newsletters" className="mt-6"><NewslettersPanel /></TabsContent>
+          <TabsContent value="analytics" className="mt-6"><AnalyticsPanel /></TabsContent>
           <TabsContent value="users" className="mt-6"><UsersPanel currentUserId={user.id} /></TabsContent>
           <TabsContent value="categories" className="mt-6"><CategoriesPanel /></TabsContent>
           <TabsContent value="tags" className="mt-6"><TagsPanel /></TabsContent>
@@ -395,6 +405,165 @@ function TagsPanel() {
           <Button className="w-full" onClick={add} disabled={!name || !slug}>Add tag</Button>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function ReviewPanel() {
+  const listFn = useServerFn(listReviewQueue);
+  const stateFn = useServerFn(setReviewState);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["review-queue"],
+    queryFn: () => listFn(),
+  });
+  const decide = async (id: string, s: "approved" | "changes_requested") => {
+    try {
+      await stateFn({ data: { articleId: id, state: s } });
+      toast.success(s === "approved" ? "Approved" : "Changes requested");
+      refetch();
+    } catch (e: any) { toast.error(e.message); }
+  };
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data?.length) return <p className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">Review queue is empty.</p>;
+  return (
+    <div className="divide-y divide-border rounded-lg border border-border">
+      {data.map((a: any) => (
+        <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <Link to="/editor/$id" params={{ id: a.id }} className="font-serif font-medium hover:text-primary">
+              {a.title || "Untitled"}
+            </Link>
+            <p className="text-xs text-muted-foreground">/{a.slug} · {a.review_state.replace("_", " ")}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => decide(a.id, "changes_requested")}>Request changes</Button>
+            <Button size="sm" onClick={() => decide(a.id, "approved")}>Approve</Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NewslettersPanel() {
+  const gen = useServerFn(generateNewsletter);
+  const listFn = useServerFn(listNewsletters);
+  const getFn = useServerFn(getNewsletter);
+  const delFn = useServerFn(deleteNewsletter);
+  const [days, setDays] = useState(7);
+  const [tone, setTone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<any>(null);
+  const { data, refetch } = useQuery({ queryKey: ["newsletters"], queryFn: () => listFn() });
+
+  const create = async () => {
+    setBusy(true);
+    try {
+      const res = await gen({ data: { days, tone: tone || undefined } });
+      if (res.error) toast.error(res.error);
+      else { toast.success("Newsletter draft created"); refetch(); }
+    } finally { setBusy(false); }
+  };
+  const view = async (id: string) => {
+    const row = await getFn({ data: { id } });
+    setPreview(row);
+  };
+  const remove = async (id: string) => {
+    if (!confirm("Delete newsletter?")) return;
+    await delFn({ data: { id } });
+    refetch();
+    if (preview?.id === id) setPreview(null);
+  };
+
+  return (
+    <div className="grid gap-6 md:grid-cols-[320px_1fr]">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Generate weekly digest</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <Label className="text-xs">Period (days)</Label>
+            <Input type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
+          </div>
+          <div>
+            <Label className="text-xs">Tone (optional)</Label>
+            <Input value={tone} onChange={(e) => setTone(e.target.value)} placeholder="warm, witty, editorial…" />
+          </div>
+          <Button className="w-full" onClick={create} disabled={busy}>
+            {busy ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Drafting…</> : <><Sparkles className="mr-1.5 size-3.5" /> Generate</>}
+          </Button>
+        </CardContent>
+      </Card>
+      <div className="space-y-3">
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {!data?.length ? (
+            <p className="p-8 text-center text-muted-foreground">No newsletters yet.</p>
+          ) : data.map((n: any) => (
+            <div key={n.id} className="flex items-center justify-between p-4">
+              <div>
+                <p className="font-medium">{n.title}</p>
+                <p className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()} · {n.status}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => view(n.id)}><Eye className="size-3.5" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(n.id)}><Trash2 className="size-3.5" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {preview && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{preview.title}</CardTitle></CardHeader>
+            <CardContent>
+              <div className="prose-article max-h-[400px] overflow-auto rounded border border-border p-4" dangerouslySetInnerHTML={{ __html: preview.html }} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsPanel() {
+  const fn = useServerFn(platformAnalytics);
+  const { data, isLoading } = useQuery({ queryKey: ["platform-analytics"], queryFn: () => fn() });
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data) return null;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Views (7d)</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.views7d.toLocaleString()}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Views (30d)</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.views30d.toLocaleString()}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">AI calls (30d)</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.ai30d.toLocaleString()}</p></CardContent></Card>
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Top articles</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {!data.topArticles.length ? <p className="text-sm text-muted-foreground">No views yet.</p> :
+              data.topArticles.map((a: any) => (
+                <div key={a.id} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0">
+                  <Link to="/articles/$slug" params={{ slug: a.slug }} className="truncate text-sm hover:text-primary">{a.title}</Link>
+                  <Badge variant="secondary">{a.view_count}</Badge>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">AI usage breakdown (30d)</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {!data.aiBreakdown.length ? <p className="text-sm text-muted-foreground">No AI activity yet.</p> :
+              data.aiBreakdown.map((b: any) => (
+                <div key={b.action} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0">
+                  <span className="text-sm capitalize">{b.action.replace("_", " ")}</span>
+                  <Badge>{b.count}</Badge>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
