@@ -71,6 +71,12 @@ function EditArticle() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPath, setMediaPath] = useState<string | null>(null);
   const [mediaTranscript, setMediaTranscript] = useState<string>("");
+  const [reviewState, setReviewState] = useState<string>("none");
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [language, setLanguage] = useState<string>("en");
+  const [translateTo, setTranslateTo] = useState<string>("es");
+  const [seoKw, setSeoKw] = useState<{ primary?: string; secondary?: string[]; long_tail?: string[] } | null>(null);
+  const [jsonLdPreview, setJsonLdPreview] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
