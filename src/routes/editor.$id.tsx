@@ -296,6 +296,81 @@ function EditArticle() {
     setMediaStage("idle");
   };
 
+  const runSeoKeywords = async () => {
+    if (!content) return toast.error("Add content first");
+    setBusy("kw");
+    try {
+      const res = await callKeywords({ data: { title, content } });
+      if (res.error) return toast.error(res.error);
+      setSeoKw({ primary: res.primary, secondary: res.secondary, long_tail: res.long_tail });
+      const kwArr = [res.primary, ...(res.secondary ?? [])].filter(Boolean);
+      await supabase.from("articles").update({ keywords: kwArr }).eq("id", id);
+      toast.success("Keywords saved");
+    } finally { setBusy(null); }
+  };
+
+  const runSeoMeta = async () => {
+    if (!title || !content) return toast.error("Title and content required");
+    setBusy("meta");
+    try {
+      const res = await callMeta({ data: { title, content, keyword: seoKw?.primary } });
+      if (res.error) return toast.error(res.error);
+      if (res.seo_title) setSeoTitle(res.seo_title);
+      if (res.meta_description) setSeoDesc(res.meta_description);
+      toast.success("Meta updated");
+    } finally { setBusy(null); }
+  };
+
+  const runSeoSchema = async () => {
+    if (!title) return toast.error("Title required");
+    setBusy("schema");
+    try {
+      const res = await callSchema({
+        data: {
+          title, excerpt, slug, coverImageUrl: coverUrl || null,
+          author: user?.email ?? undefined,
+          publishedAt: status === "published" ? new Date().toISOString() : null,
+        },
+      });
+      if (res.error) return toast.error(res.error);
+      setJsonLdPreview(res.json_ld);
+      await supabase.from("articles").update({ json_ld: res.json_ld }).eq("id", id);
+      toast.success("JSON-LD schema saved");
+    } finally { setBusy(null); }
+  };
+
+  const runTranslate = async () => {
+    setBusy("translate");
+    try {
+      const res = await callTranslate({ data: { articleId: id, targetLang: translateTo } });
+      if (res.error) return toast.error(res.error);
+      toast.success("Translated draft created");
+      if (res.articleId) navigate({ to: "/editor/$id", params: { id: res.articleId } });
+    } finally { setBusy(null); }
+  };
+
+  const saveSchedule = async () => {
+    setBusy("schedule");
+    try {
+      const iso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+      await callSchedule({ data: { articleId: id, scheduledAt: iso } });
+      toast.success(iso ? "Scheduled" : "Schedule cleared");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
+  const sendForReview = async () => {
+    setBusy("review");
+    try {
+      await callSubmitReview({ data: { articleId: id } });
+      setReviewState("submitted");
+      toast.success("Submitted for review");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
+
+
 
 
 
