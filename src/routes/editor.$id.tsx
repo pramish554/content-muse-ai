@@ -303,7 +303,7 @@ function EditArticle() {
       const res = await callKeywords({ data: { title, content } });
       if (res.error) return toast.error(res.error);
       setSeoKw({ primary: res.primary, secondary: res.secondary, long_tail: res.long_tail });
-      const kwArr = [res.primary, ...(res.secondary ?? [])].filter(Boolean);
+      const kwArr = [res.primary, ...(res.secondary ?? [])].filter((v): v is string => !!v);
       await supabase.from("articles").update({ keywords: kwArr }).eq("id", id);
       toast.success("Keywords saved");
     } finally { setBusy(null); }
