@@ -99,7 +99,7 @@ function EditArticle() {
       setScheduledAt(data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 16) : "");
       setJsonLdPreview(data.json_ld ?? null);
       if (Array.isArray(data.keywords)) {
-        setSeoKw({ primary: data.keywords[0], secondary: data.keywords.slice(1) });
+        setSeoKw({ primary: String(data.keywords[0] ?? ""), secondary: data.keywords.slice(1).map(String) });
       }
     })();
   }, [id]);
