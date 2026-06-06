@@ -642,6 +642,100 @@ function EditArticle() {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Search className="size-4 text-primary" /> SEO toolkit
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              <Button size="sm" variant="outline" onClick={runSeoKeywords} disabled={busy !== null}>
+                {busy === "kw" ? <Loader2 className="size-3.5 animate-spin" /> : "Keywords"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={runSeoMeta} disabled={busy !== null}>
+                {busy === "meta" ? <Loader2 className="size-3.5 animate-spin" /> : "Meta"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={runSeoSchema} disabled={busy !== null}>
+                {busy === "schema" ? <Loader2 className="size-3.5 animate-spin" /> : <><Code2 className="mr-1 size-3.5" />Schema</>}
+              </Button>
+            </div>
+            {seoKw?.primary && (
+              <div className="rounded bg-muted p-2 text-xs">
+                <p><span className="font-medium">Primary:</span> {seoKw.primary}</p>
+                {seoKw.secondary?.length ? (
+                  <p className="mt-1 text-muted-foreground">Secondary: {seoKw.secondary.join(", ")}</p>
+                ) : null}
+                {seoKw.long_tail?.length ? (
+                  <p className="mt-1 text-muted-foreground">Long-tail: {seoKw.long_tail.join(", ")}</p>
+                ) : null}
+              </div>
+            )}
+            {jsonLdPreview && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground">JSON-LD preview</summary>
+                <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 text-[10px]">
+                  {JSON.stringify(jsonLdPreview, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Languages className="size-4 text-primary" /> Translate
+            </h3>
+            <p className="text-xs text-muted-foreground">Current language: {LANGUAGES[language] ?? language}</p>
+            <div className="flex gap-2">
+              <Select value={translateTo} onValueChange={setTranslateTo}>
+                <SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LANGUAGES).filter(([k]) => k !== language).map(([k, name]) => (
+                    <SelectItem key={k} value={k}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={runTranslate} disabled={busy !== null || !content}>
+                {busy === "translate" ? <Loader2 className="size-3.5 animate-spin" /> : "Create"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h3 className="flex items-center gap-1.5 font-serif text-lg font-semibold">
+              <Clock className="size-4 text-primary" /> Schedule & review
+            </h3>
+            <div>
+              <Label className="text-xs">Publish at</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+                <Button size="sm" variant="outline" onClick={saveSchedule} disabled={busy !== null}>
+                  {busy === "schedule" ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Scheduled drafts auto-publish when the cron job runs.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Editorial review</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge variant={reviewState === "approved" ? "default" : "secondary"} className="capitalize">
+                  {reviewState.replace("_", " ")}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={sendForReview}
+                  disabled={busy !== null || reviewState === "submitted"}
+                >
+                  <ShieldCheck className="mr-1 size-3.5" /> Submit
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <h3 className="font-serif text-lg font-semibold">Settings</h3>
             <div>
               <Label className="text-xs">Slug</Label>
