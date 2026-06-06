@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/site-header";
 import { format } from "date-fns";
@@ -33,6 +34,28 @@ function ArticleView() {
     },
   });
 
+  // Log anonymous view + inject JSON-LD when article loads
+  useEffect(() => {
+    if (!data) return;
+    supabase.rpc("log_article_view", { _slug: slug });
+
+    const ld = data.json_ld ?? {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: data.title,
+      description: data.excerpt ?? undefined,
+      image: data.cover_image_url ?? undefined,
+      datePublished: data.published_at ?? undefined,
+      mainEntityOfPage: { "@type": "WebPage", "@id": `/articles/${slug}` },
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "article-jsonld";
+    script.text = JSON.stringify(ld);
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, [data, slug]);
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -47,6 +70,7 @@ function ArticleView() {
             {data.published_at && (
               <p className="mt-6 text-xs uppercase tracking-wider text-muted-foreground">
                 Published {format(new Date(data.published_at), "MMMM d, yyyy")}
+                {data.view_count ? ` · ${data.view_count.toLocaleString()} views` : ""}
               </p>
             )}
             {data.cover_image_url && (
