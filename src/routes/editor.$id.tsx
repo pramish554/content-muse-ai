@@ -40,6 +40,12 @@ function EditArticle() {
   const callTeam = useServerFn(runAgentTeam);
   const callTranscribe = useServerFn(transcribeMedia);
   const callArticle = useServerFn(transcriptToArticle);
+  const callKeywords = useServerFn(seoKeywords);
+  const callMeta = useServerFn(seoMeta);
+  const callSchema = useServerFn(seoSchema);
+  const callTranslate = useServerFn(translateArticle);
+  const callSchedule = useServerFn(scheduleArticle);
+  const callSubmitReview = useServerFn(submitForReview);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
