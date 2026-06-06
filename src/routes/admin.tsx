@@ -33,7 +33,10 @@ import {
   deleteTag,
 } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3 } from "lucide-react";
+import { listReviewQueue, setReviewState } from "@/lib/workflow.functions";
+import { generateNewsletter, listNewsletters, getNewsletter, deleteNewsletter } from "@/lib/newsletter.functions";
+import { platformAnalytics } from "@/lib/analytics.functions";
+import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3, Mail, ClipboardCheck, Sparkles, Loader2, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Ink" }] }),
