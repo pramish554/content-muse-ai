@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EditorIdRouteImport } from './routes/editor.$id'
 import { Route as ArticlesSlugRouteImport } from './routes/articles.$slug'
+import { Route as ApiPublicPublishScheduledRouteImport } from './routes/api/public/publish-scheduled'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -46,6 +47,12 @@ const ArticlesSlugRoute = ArticlesSlugRouteImport.update({
   path: '/articles/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPublishScheduledRoute =
+  ApiPublicPublishScheduledRouteImport.update({
+    id: '/api/public/publish-scheduled',
+    path: '/api/public/publish-scheduled',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +70,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +80,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +91,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/api/public/publish-scheduled'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +100,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/api/public/publish-scheduled'
   id:
     | '__root__'
     | '/'
@@ -97,6 +109,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/api/public/publish-scheduled'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +119,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ArticlesSlugRoute: typeof ArticlesSlugRoute
   EditorIdRoute: typeof EditorIdRoute
+  ApiPublicPublishScheduledRoute: typeof ApiPublicPublishScheduledRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArticlesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/publish-scheduled': {
+      id: '/api/public/publish-scheduled'
+      path: '/api/public/publish-scheduled'
+      fullPath: '/api/public/publish-scheduled'
+      preLoaderRoute: typeof ApiPublicPublishScheduledRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -162,6 +183,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ArticlesSlugRoute: ArticlesSlugRoute,
   EditorIdRoute: EditorIdRoute,
+  ApiPublicPublishScheduledRoute: ApiPublicPublishScheduledRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
