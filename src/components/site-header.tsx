@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Moon, Sun, PenLine, LogOut, Shield } from "lucide-react";
+import { Moon, Sun, PenLine, LogOut, Shield, MessagesSquare } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
