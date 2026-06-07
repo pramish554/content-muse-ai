@@ -27,6 +27,11 @@ export function SiteHeader() {
                   <PenLine className="mr-1.5 size-4" /> Dashboard
                 </Button>
               </Link>
+              <Link to="/knowledge">
+                <Button variant="ghost" size="sm">
+                  <MessagesSquare className="mr-1.5 size-4" /> Ask KB
+                </Button>
+              </Link>
               {isAdmin && (
                 <Link to="/admin">
                   <Button variant="ghost" size="sm">
