@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -17,6 +18,11 @@ import { Route as EditorIdRouteImport } from './routes/editor.$id'
 import { Route as ArticlesSlugRouteImport } from './routes/articles.$slug'
 import { Route as ApiPublicPublishScheduledRouteImport } from './routes/api/public/publish-scheduled'
 
+const KnowledgeRoute = KnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/knowledge': typeof KnowledgeRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/knowledge': typeof KnowledgeRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/knowledge': typeof KnowledgeRoute
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/dashboard'
+    | '/knowledge'
     | '/articles/$slug'
     | '/editor/$id'
     | '/api/public/publish-scheduled'
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/dashboard'
+    | '/knowledge'
     | '/articles/$slug'
     | '/editor/$id'
     | '/api/public/publish-scheduled'
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/dashboard'
+    | '/knowledge'
     | '/articles/$slug'
     | '/editor/$id'
     | '/api/public/publish-scheduled'
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  KnowledgeRoute: typeof KnowledgeRoute
   ArticlesSlugRoute: typeof ArticlesSlugRoute
   EditorIdRoute: typeof EditorIdRoute
   ApiPublicPublishScheduledRoute: typeof ApiPublicPublishScheduledRoute
@@ -124,6 +137,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/knowledge': {
+      id: '/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof KnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  KnowledgeRoute: KnowledgeRoute,
   ArticlesSlugRoute: ArticlesSlugRoute,
   EditorIdRoute: EditorIdRoute,
   ApiPublicPublishScheduledRoute: ApiPublicPublishScheduledRoute,
