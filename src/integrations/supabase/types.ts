@@ -246,6 +246,77 @@ export type Database = {
           },
         ]
       }
+      kb_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          source_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          source_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_chunks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "kb_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_sources: {
+        Row: {
+          char_count: number
+          chunk_count: number
+          created_at: string
+          id: string
+          source_type: string
+          source_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          char_count?: number
+          chunk_count?: number
+          created_at?: string
+          id?: string
+          source_type?: string
+          source_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          char_count?: number
+          chunk_count?: number
+          created_at?: string
+          id?: string
+          source_type?: string
+          source_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       newsletters: {
         Row: {
           author_id: string
@@ -361,6 +432,18 @@ export type Database = {
         Returns: boolean
       }
       log_article_view: { Args: { _slug: string }; Returns: undefined }
+      match_kb_chunks: {
+        Args: { match_count?: number; query_embedding: string }
+        Returns: {
+          chunk_index: number
+          content: string
+          id: string
+          similarity: number
+          source_id: string
+          source_title: string
+          source_url: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "editor" | "author"
