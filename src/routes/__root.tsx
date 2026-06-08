@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth-context";
+import { WorkspaceProvider } from "@/lib/workspace-context";
 import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -102,8 +103,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Outlet />
-          <Toaster richColors position="top-center" />
+          <WorkspaceProvider>
+            <Outlet />
+            <Toaster richColors position="top-center" />
+          </WorkspaceProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

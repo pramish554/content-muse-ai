@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useWorkspace } from "@/lib/workspace-context";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const { user, roles, loading } = useAuth();
+  const { active } = useWorkspace();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,11 +26,15 @@ function Dashboard() {
   }, [user, loading, navigate]);
 
   const { data: articles, refetch } = useQuery({
-    enabled: !!user,
-    queryKey: ["my-articles", user?.id],
+    enabled: !!user && !!active,
+    queryKey: ["my-articles", user?.id, active?.id],
     queryFn: async () => {
       const isEditor = roles.includes("admin") || roles.includes("editor");
-      const q = supabase.from("articles").select("*").order("updated_at", { ascending: false });
+      const q = supabase
+        .from("articles")
+        .select("*")
+        .eq("workspace_id", active!.id)
+        .order("updated_at", { ascending: false });
       if (!isEditor) q.eq("author_id", user!.id);
       const { data, error } = await q;
       if (error) throw error;
@@ -37,11 +43,11 @@ function Dashboard() {
   });
 
   const createDraft = async () => {
-    if (!user) return;
+    if (!user || !active) return;
     const slug = `draft-${Math.random().toString(36).slice(2, 8)}`;
     const { data, error } = await supabase
       .from("articles")
-      .insert({ author_id: user.id, title: "Untitled", slug, content: "" })
+      .insert({ author_id: user.id, title: "Untitled", slug, content: "", workspace_id: active.id })
       .select()
       .single();
     if (error) return toast.error(error.message);

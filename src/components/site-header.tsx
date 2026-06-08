@@ -3,6 +3,7 @@ import { Moon, Sun, PenLine, LogOut, Shield, MessagesSquare } from "lucide-react
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 export function SiteHeader() {
   const { user, roles, signOut } = useAuth();
@@ -17,6 +18,7 @@ export function SiteHeader() {
           <span className="text-muted-foreground text-sm font-sans">— editorial CMS</span>
         </Link>
         <nav className="flex items-center gap-2">
+          {user && <WorkspaceSwitcher />}
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
             {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>

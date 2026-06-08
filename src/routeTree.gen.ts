@@ -9,15 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkspacesRouteImport } from './routes/workspaces'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EditorIdRouteImport } from './routes/editor.$id'
 import { Route as ArticlesSlugRouteImport } from './routes/articles.$slug'
+import { Route as WorkspacesIdSettingsRouteImport } from './routes/workspaces.$id.settings'
 import { Route as ApiPublicPublishScheduledRouteImport } from './routes/api/public/publish-scheduled'
 
+const WorkspacesRoute = WorkspacesRouteImport.update({
+  id: '/workspaces',
+  path: '/workspaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KnowledgeRoute = KnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
@@ -43,6 +51,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EditorIdRoute = EditorIdRouteImport.update({
   id: '/editor/$id',
   path: '/editor/$id',
@@ -52,6 +65,11 @@ const ArticlesSlugRoute = ArticlesSlugRouteImport.update({
   id: '/articles/$slug',
   path: '/articles/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspacesIdSettingsRoute = WorkspacesIdSettingsRouteImport.update({
+  id: '/$id/settings',
+  path: '/$id/settings',
+  getParentRoute: () => WorkspacesRoute,
 } as any)
 const ApiPublicPublishScheduledRoute =
   ApiPublicPublishScheduledRouteImport.update({
@@ -66,9 +84,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/knowledge': typeof KnowledgeRoute
+  '/workspaces': typeof WorkspacesRouteWithChildren
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
+  '/workspaces/$id/settings': typeof WorkspacesIdSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,9 +97,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/knowledge': typeof KnowledgeRoute
+  '/workspaces': typeof WorkspacesRouteWithChildren
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
+  '/workspaces/$id/settings': typeof WorkspacesIdSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,9 +111,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/knowledge': typeof KnowledgeRoute
+  '/workspaces': typeof WorkspacesRouteWithChildren
   '/articles/$slug': typeof ArticlesSlugRoute
   '/editor/$id': typeof EditorIdRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/api/public/publish-scheduled': typeof ApiPublicPublishScheduledRoute
+  '/workspaces/$id/settings': typeof WorkspacesIdSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,9 +126,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/knowledge'
+    | '/workspaces'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/invite/$token'
     | '/api/public/publish-scheduled'
+    | '/workspaces/$id/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,9 +139,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/knowledge'
+    | '/workspaces'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/invite/$token'
     | '/api/public/publish-scheduled'
+    | '/workspaces/$id/settings'
   id:
     | '__root__'
     | '/'
@@ -119,9 +152,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/knowledge'
+    | '/workspaces'
     | '/articles/$slug'
     | '/editor/$id'
+    | '/invite/$token'
     | '/api/public/publish-scheduled'
+    | '/workspaces/$id/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,13 +166,22 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   KnowledgeRoute: typeof KnowledgeRoute
+  WorkspacesRoute: typeof WorkspacesRouteWithChildren
   ArticlesSlugRoute: typeof ArticlesSlugRoute
   EditorIdRoute: typeof EditorIdRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   ApiPublicPublishScheduledRoute: typeof ApiPublicPublishScheduledRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workspaces': {
+      id: '/workspaces'
+      path: '/workspaces'
+      fullPath: '/workspaces'
+      preLoaderRoute: typeof WorkspacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/knowledge': {
       id: '/knowledge'
       path: '/knowledge'
@@ -172,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/editor/$id': {
       id: '/editor/$id'
       path: '/editor/$id'
@@ -186,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArticlesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspaces/$id/settings': {
+      id: '/workspaces/$id/settings'
+      path: '/$id/settings'
+      fullPath: '/workspaces/$id/settings'
+      preLoaderRoute: typeof WorkspacesIdSettingsRouteImport
+      parentRoute: typeof WorkspacesRoute
+    }
     '/api/public/publish-scheduled': {
       id: '/api/public/publish-scheduled'
       path: '/api/public/publish-scheduled'
@@ -196,26 +255,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface WorkspacesRouteChildren {
+  WorkspacesIdSettingsRoute: typeof WorkspacesIdSettingsRoute
+}
+
+const WorkspacesRouteChildren: WorkspacesRouteChildren = {
+  WorkspacesIdSettingsRoute: WorkspacesIdSettingsRoute,
+}
+
+const WorkspacesRouteWithChildren = WorkspacesRoute._addFileChildren(
+  WorkspacesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   KnowledgeRoute: KnowledgeRoute,
+  WorkspacesRoute: WorkspacesRouteWithChildren,
   ArticlesSlugRoute: ArticlesSlugRoute,
   EditorIdRoute: EditorIdRoute,
+  InviteTokenRoute: InviteTokenRoute,
   ApiPublicPublishScheduledRoute: ApiPublicPublishScheduledRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
