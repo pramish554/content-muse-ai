@@ -23,7 +23,14 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) navigate({ to: "/dashboard", replace: true });
+    if (!user) return;
+    const pending = typeof window !== "undefined" ? sessionStorage.getItem("ink.pendingInvite") : null;
+    if (pending) {
+      sessionStorage.removeItem("ink.pendingInvite");
+      navigate({ to: "/invite/$token", params: { token: pending }, replace: true });
+    } else {
+      navigate({ to: "/dashboard", replace: true });
+    }
   }, [user, navigate]);
 
   const signIn = async (e: React.FormEvent) => {
