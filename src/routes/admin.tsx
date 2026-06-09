@@ -32,12 +32,18 @@ import {
   deleteCategory,
   upsertTag,
   deleteTag,
+  adminListWorkspaces,
+  adminDeleteWorkspace,
+  adminAiUsage,
+  adminListKbSources,
+  adminDeleteKbSource,
 } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { listReviewQueue, setReviewState } from "@/lib/workflow.functions";
 import { generateNewsletter, listNewsletters, getNewsletter, deleteNewsletter } from "@/lib/newsletter.functions";
 import { platformAnalytics } from "@/lib/analytics.functions";
-import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3, Mail, ClipboardCheck, Sparkles, Loader2, Eye } from "lucide-react";
+import { Shield, Trash2, FileText, Users, Tag, FolderTree, BarChart3, Mail, ClipboardCheck, Sparkles, Loader2, Eye, Building2, Brain, Database } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Ink" }] }),
