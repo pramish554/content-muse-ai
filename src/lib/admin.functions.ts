@@ -221,3 +221,108 @@ export const deleteTag = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const adminListWorkspaces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ws, error } = await supabaseAdmin
+      .from("workspaces")
+      .select("id, name, slug, owner_id, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const ids = (ws ?? []).map((w) => w.id);
+    const [{ data: members }, { data: arts }, { data: kb }] = await Promise.all([
+      supabaseAdmin.from("workspace_members").select("workspace_id"),
+      supabaseAdmin.from("articles").select("workspace_id"),
+      supabaseAdmin.from("kb_sources").select("workspace_id"),
+    ]);
+    const count = (rows: any[] | null, key: string) => {
+      const m = new Map<string, number>();
+      for (const r of rows ?? []) m.set(r[key], (m.get(r[key]) ?? 0) + 1);
+      return m;
+    };
+    const mMembers = count(members, "workspace_id");
+    const mArts = count(arts, "workspace_id");
+    const mKb = count(kb, "workspace_id");
+    return (ws ?? []).map((w) => ({
+      ...w,
+      member_count: mMembers.get(w.id) ?? 0,
+      article_count: mArts.get(w.id) ?? 0,
+      kb_count: mKb.get(w.id) ?? 0,
+    }));
+  });
+
+export const adminDeleteWorkspace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ workspaceId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("workspaces").delete().eq("id", data.workspaceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminAiUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: logs, error } = await supabaseAdmin
+      .from("ai_usage_log")
+      .select("id, user_id, action, model, tokens, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const userIds = Array.from(new Set((logs ?? []).map((l) => l.user_id)));
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
+    const nameMap = new Map<string, string>();
+    for (const p of profiles ?? []) nameMap.set(p.id, p.display_name ?? "");
+    const totalTokens = (logs ?? []).reduce((s, l) => s + (l.tokens ?? 0), 0);
+    const byModel = new Map<string, number>();
+    for (const l of logs ?? []) byModel.set(l.model ?? "unknown", (byModel.get(l.model ?? "unknown") ?? 0) + (l.tokens ?? 0));
+    return {
+      logs: (logs ?? []).map((l) => ({ ...l, user_name: nameMap.get(l.user_id) ?? l.user_id.slice(0, 8) })),
+      totalTokens,
+      byModel: Array.from(byModel.entries()).map(([model, tokens]) => ({ model, tokens })).sort((a, b) => b.tokens - a.tokens),
+    };
+  });
+
+export const adminListKbSources = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("kb_sources")
+      .select("id, title, source_type, source_url, char_count, chunk_count, workspace_id, user_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const wsIds = Array.from(new Set((data ?? []).map((s) => s.workspace_id).filter(Boolean) as string[]));
+    const { data: ws } = await supabaseAdmin.from("workspaces").select("id, name").in("id", wsIds.length ? wsIds : ["00000000-0000-0000-0000-000000000000"]);
+    const wsMap = new Map<string, string>();
+    for (const w of ws ?? []) wsMap.set(w.id, w.name);
+    return (data ?? []).map((s) => ({ ...s, workspace_name: s.workspace_id ? wsMap.get(s.workspace_id) ?? "—" : "—" }));
+  });
+
+export const adminDeleteKbSource = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("kb_sources").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
