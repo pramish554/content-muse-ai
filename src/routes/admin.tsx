@@ -579,3 +579,172 @@ function AnalyticsPanel() {
     </div>
   );
 }
+
+function WorkspacesPanel() {
+  const listFn = useServerFn(adminListWorkspaces);
+  const delFn = useServerFn(adminDeleteWorkspace);
+  const { data, isLoading, refetch } = useQuery({ queryKey: ["admin-workspaces"], queryFn: () => listFn() });
+
+  const remove = async (id: string, name: string) => {
+    if (!confirm(`Delete workspace "${name}" and ALL its content? This cannot be undone.`)) return;
+    try {
+      await delFn({ data: { workspaceId: id } });
+      toast.success("Workspace deleted");
+      refetch();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data?.length) return <p className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">No workspaces yet.</p>;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left">
+          <tr>
+            <th className="p-3">Workspace</th>
+            <th className="p-3">Members</th>
+            <th className="p-3">Articles</th>
+            <th className="p-3">KB sources</th>
+            <th className="p-3">Created</th>
+            <th className="p-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((w: any) => (
+            <tr key={w.id} className="border-t border-border">
+              <td className="p-3">
+                <div className="font-medium">{w.name}</div>
+                <div className="text-xs text-muted-foreground">/{w.slug}</div>
+              </td>
+              <td className="p-3"><Badge variant="secondary">{w.member_count}</Badge></td>
+              <td className="p-3"><Badge variant="secondary">{w.article_count}</Badge></td>
+              <td className="p-3"><Badge variant="secondary">{w.kb_count}</Badge></td>
+              <td className="p-3 text-muted-foreground">{formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}</td>
+              <td className="p-3 text-right">
+                <Button variant="ghost" size="icon" onClick={() => remove(w.id, w.name)}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AiUsagePanel() {
+  const fn = useServerFn(adminAiUsage);
+  const { data, isLoading } = useQuery({ queryKey: ["admin-ai-usage"], queryFn: () => fn() });
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data) return null;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total tokens (recent)</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.totalTokens.toLocaleString()}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Calls (recent)</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.logs.length}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Models used</CardTitle></CardHeader>
+          <CardContent><p className="font-serif text-3xl font-semibold">{data.byModel.length}</p></CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Tokens by model</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {!data.byModel.length ? <p className="text-sm text-muted-foreground">No usage yet.</p> :
+            data.byModel.map((m: any) => (
+              <div key={m.model} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0">
+                <span className="font-mono text-sm">{m.model}</span>
+                <Badge>{m.tokens.toLocaleString()} tokens</Badge>
+              </div>
+            ))}
+        </CardContent>
+      </Card>
+
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-left">
+            <tr>
+              <th className="p-3">When</th>
+              <th className="p-3">User</th>
+              <th className="p-3">Action</th>
+              <th className="p-3">Model</th>
+              <th className="p-3 text-right">Tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.logs.map((l: any) => (
+              <tr key={l.id} className="border-t border-border">
+                <td className="p-3 text-muted-foreground">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true })}</td>
+                <td className="p-3">{l.user_name}</td>
+                <td className="p-3"><Badge variant="secondary" className="capitalize">{l.action.replace(/_/g, " ")}</Badge></td>
+                <td className="p-3 font-mono text-xs">{l.model ?? "—"}</td>
+                <td className="p-3 text-right">{l.tokens.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function KbPanel() {
+  const listFn = useServerFn(adminListKbSources);
+  const delFn = useServerFn(adminDeleteKbSource);
+  const { data, isLoading, refetch } = useQuery({ queryKey: ["admin-kb-sources"], queryFn: () => listFn() });
+  const remove = async (id: string) => {
+    if (!confirm("Delete this knowledge source and all its chunks?")) return;
+    try {
+      await delFn({ data: { id } });
+      toast.success("Deleted");
+      refetch();
+    } catch (e: any) { toast.error(e.message); }
+  };
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data?.length) return <p className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">No knowledge sources yet.</p>;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left">
+          <tr>
+            <th className="p-3">Title</th>
+            <th className="p-3">Workspace</th>
+            <th className="p-3">Type</th>
+            <th className="p-3 text-right">Chars</th>
+            <th className="p-3 text-right">Chunks</th>
+            <th className="p-3">Added</th>
+            <th className="p-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((s: any) => (
+            <tr key={s.id} className="border-t border-border">
+              <td className="p-3">
+                <div className="font-medium">{s.title}</div>
+                {s.source_url && <div className="truncate text-xs text-muted-foreground" style={{ maxWidth: 280 }}>{s.source_url}</div>}
+              </td>
+              <td className="p-3 text-muted-foreground">{s.workspace_name}</td>
+              <td className="p-3"><Badge variant="secondary" className="capitalize">{s.source_type}</Badge></td>
+              <td className="p-3 text-right">{s.char_count.toLocaleString()}</td>
+              <td className="p-3 text-right">{s.chunk_count}</td>
+              <td className="p-3 text-muted-foreground">{formatDistanceToNow(new Date(s.created_at), { addSuffix: true })}</td>
+              <td className="p-3 text-right">
+                <Button variant="ghost" size="icon" onClick={() => remove(s.id)}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
