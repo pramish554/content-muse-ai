@@ -101,6 +101,9 @@ function AdminPage() {
             <TabsTrigger value="newsletters"><Mail className="mr-1.5 size-4" /> Newsletters</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="mr-1.5 size-4" /> Analytics</TabsTrigger>
             <TabsTrigger value="users"><Users className="mr-1.5 size-4" /> Users</TabsTrigger>
+            <TabsTrigger value="workspaces"><Building2 className="mr-1.5 size-4" /> Workspaces</TabsTrigger>
+            <TabsTrigger value="ai"><Brain className="mr-1.5 size-4" /> AI Usage</TabsTrigger>
+            <TabsTrigger value="kb"><Database className="mr-1.5 size-4" /> Knowledge</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="mr-1.5 size-4" /> Categories</TabsTrigger>
             <TabsTrigger value="tags"><Tag className="mr-1.5 size-4" /> Tags</TabsTrigger>
           </TabsList>
@@ -111,6 +114,9 @@ function AdminPage() {
           <TabsContent value="newsletters" className="mt-6"><NewslettersPanel /></TabsContent>
           <TabsContent value="analytics" className="mt-6"><AnalyticsPanel /></TabsContent>
           <TabsContent value="users" className="mt-6"><UsersPanel currentUserId={user.id} /></TabsContent>
+          <TabsContent value="workspaces" className="mt-6"><WorkspacesPanel /></TabsContent>
+          <TabsContent value="ai" className="mt-6"><AiUsagePanel /></TabsContent>
+          <TabsContent value="kb" className="mt-6"><KbPanel /></TabsContent>
           <TabsContent value="categories" className="mt-6"><CategoriesPanel /></TabsContent>
           <TabsContent value="tags" className="mt-6"><TagsPanel /></TabsContent>
         </Tabs>
