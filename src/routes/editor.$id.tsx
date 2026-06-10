@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/select";
 import { Sparkles, Wand2, Tags, Search, Eye, Save, Send, Users, CheckCircle2, Loader2, Mic, Upload, RefreshCw, AlertTriangle, FileText, X, Languages, Clock, ShieldCheck, Code2 } from "lucide-react";
 import { toast } from "sonner";
+import { RepurposePanel } from "@/components/repurpose-panel";
+import { ImageGenPanel } from "@/components/image-gen-panel";
+import { useWorkspace } from "@/lib/workspace-context";
 
 export const Route = createFileRoute("/editor/$id")({
   head: () => ({ meta: [{ title: "Edit — Ink" }] }),
@@ -36,6 +39,7 @@ function EditArticle() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { active: activeWorkspace } = useWorkspace();
   const callAi = useServerFn(aiAssist);
   const callTeam = useServerFn(runAgentTeam);
   const callTranscribe = useServerFn(transcribeMedia);
@@ -734,6 +738,13 @@ function EditArticle() {
               </div>
             </div>
           </div>
+
+          <RepurposePanel articleId={id} />
+          <ImageGenPanel
+            articleId={id}
+            workspaceId={activeWorkspace?.id ?? null}
+            onUseAsCover={(url) => setCoverUrl(url)}
+          />
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <h3 className="font-serif text-lg font-semibold">Settings</h3>
