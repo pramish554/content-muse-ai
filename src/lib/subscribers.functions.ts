@@ -141,8 +141,9 @@ export const setSubscriberStatus = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await assertEditor(supabase, userId, data.workspace_id);
-    const patch: Record<string, unknown> = { status: data.status };
+    const patch: { status: typeof data.status; unsubscribed_at?: string | null } = { status: data.status };
     if (data.status === "unsubscribed") patch.unsubscribed_at = new Date().toISOString();
+    else patch.unsubscribed_at = null;
     const { error } = await supabase
       .from("subscribers")
       .update(patch)
