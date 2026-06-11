@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Moon, Sun, PenLine, LogOut, Shield, MessagesSquare } from "lucide-react";
+import { Moon, Sun, PenLine, LogOut, Shield, MessagesSquare, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,11 @@ export function SiteHeader() {
               <Link to="/knowledge">
                 <Button variant="ghost" size="sm">
                   <MessagesSquare className="mr-1.5 size-4" /> Ask KB
+                </Button>
+              </Link>
+              <Link to="/subscribers">
+                <Button variant="ghost" size="sm">
+                  <Users className="mr-1.5 size-4" /> Subscribers
                 </Button>
               </Link>
               {isAdmin && (
